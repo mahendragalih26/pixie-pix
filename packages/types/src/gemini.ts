@@ -3,6 +3,11 @@ export interface GeminiResponse {
   text: string
 }
 
+export interface GeminiApiResponse {
+  type: string
+  data: any
+}
+
 // Define the shape of the error
 export interface GeminiError {
   error: string

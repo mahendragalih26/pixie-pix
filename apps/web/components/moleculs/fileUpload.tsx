@@ -3,42 +3,27 @@
 import React, { useRef, useState, useEffect } from "react"
 import Image from "next/image"
 import { CloudUpload } from "lucide-react"
-import { useMutation } from "@tanstack/react-query"
 
-import { GeminiError, GeminiResponse, MutationVariables } from "@repo/types"
+interface Props {
+  onUpload: (image: File) => void
+  upload: File | null
+}
 
-const FileUpload: React.FC = () => {
-  const prompt = process.env.NEXT_PUBLIC_PROMPT_CHECK_IMAGE
-  const [file, setFile] = useState<File | null>(null)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+const FileUpload = ({ onUpload, upload }: Props) => {
+  // const [file, setFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const {
-    mutate,
-    isPending,
-    isError,
-    error,
-    data: generatedContent,
-  } = useMutation<GeminiResponse, Error, MutationVariables>({
-    mutationFn: async ({ prompt, image }) => {
-      // Create a FormData object to send the file and prompt
-      const formData = new FormData()
-      formData.append("prompt", prompt)
-      formData.append("image", image)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
 
-      const response = await fetch("/api/generate", {
-        method: "POST",
-        body: formData, // Send FormData instead of JSON
-      })
-
-      if (!response.ok) {
-        const errorData: GeminiError = await response.json()
-        throw new Error(errorData.error || "An unknown error occurred")
-      }
-
-      return response.json()
-    },
-  })
+  useEffect(() => {
+    if (upload) {
+      const reader = new FileReader()
+      reader.onloadend = () => setPreviewUrl(reader.result as string)
+      reader.readAsDataURL(upload)
+    } else {
+      setPreviewUrl(null)
+    }
+  }, [upload])
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
@@ -46,7 +31,7 @@ const FileUpload: React.FC = () => {
 
     const droppedFile = e.dataTransfer.files[0]
     if (droppedFile && droppedFile.type.startsWith("image/")) {
-      setFile(droppedFile)
+      onUpload(droppedFile)
     }
   }
 
@@ -58,23 +43,7 @@ const FileUpload: React.FC = () => {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
     if (selectedFile && selectedFile.type.startsWith("image/")) {
-      setFile(selectedFile)
-    }
-  }
-
-  useEffect(() => {
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => setPreviewUrl(reader.result as string)
-      reader.readAsDataURL(file)
-    } else {
-      setPreviewUrl(null)
-    }
-  }, [file])
-
-  const handleSubmit = () => {
-    if (file && prompt) {
-      mutate({ prompt, image: file })
+      onUpload(selectedFile)
     }
   }
 
@@ -114,31 +83,27 @@ const FileUpload: React.FC = () => {
         onChange={handleFileSelect}
       />
 
-      {file && (
+      {upload && (
         <p className="mt-4 text-center text-sm text-gray-700">
-          ✅ File selected: <span className="font-medium">{file.name}</span>
+          ✅ File selected: <span className="font-medium">{upload.name}</span>
         </p>
       )}
 
-      <button onClick={handleSubmit} className="text-blue-400 p-4 bg-red-300">
-        submit
-      </button>
-
-      {isError && (
+      {/* {isError && (
         <div className="p-4 bg-red-100 text-red-700 rounded-md">
           <p>
             <strong>Error:</strong> {error.message}
           </p>
         </div>
-      )}
-      {generatedContent && (
+      )} */}
+      {/* {generatedContent && (
         <div className="p-4 bg-black rounded-md">
           <h2 className="font-semibold">Response:</h2>
           <p className="whitespace-pre-wrap text-white">
             {generatedContent.text}
           </p>
         </div>
-      )}
+      )} */}
     </div>
   )
 }

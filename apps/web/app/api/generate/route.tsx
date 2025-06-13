@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
     // Upload Image method
     const buffer = Buffer.from(await image.arrayBuffer())
     const base64Image = buffer.toString("base64")
+    console.log("prompt, image", prompt, image)
 
     const imagePart = fileToGenerativePart(base64Image, image.type)
     const ai = new GoogleGenAI({ apiKey: key })
@@ -60,21 +61,49 @@ export async function POST(req: NextRequest) {
     //   //   imagePreview = chunk.candidates?.[0]?.content ?? ""
     // }
 
-    let text = ""
-    for (const part of response.candidates[0].content.parts) {
-      // Based on the part type, either show the text or save the image
-      if (part.text) {
-        // console.log(part.text);
-        text = part.text
-      } else if (part.inlineData) {
-        const imageData = part.inlineData.data
-        const buffer = Buffer.from(imageData, "base64")
-        fs.writeFileSync("gemini-native-image.png", buffer)
-        console.log("Image saved as gemini-native-image.png")
+    let textOutput = ""
+    let imageBuffer: Buffer | undefined
+    let imageMimeType: string = "image/png" // Default to PNG, or extract dynamically if possible
+
+    for await (const chunk of response) {
+      const responsePart = chunk?.candidates?.[0]?.content?.parts
+      if (responsePart) {
+        for (const part of responsePart) {
+          // Based on the part type, either show the text or save the image
+          if (part.text) {
+            // console.log(part.text);
+            textOutput = part.text
+          } else if (part.inlineData) {
+            const imageData = part?.inlineData?.data
+            if (imageData) {
+              imageBuffer = Buffer.from(imageData, "base64")
+              // If you need to be precise with the mime type from the model's response:
+              // imageMimeType = part.inlineData.mimeType || "image/png";
+            }
+          }
+        }
       }
     }
     // [END text_gen_multimodal_one_image_prompt_streaming]
-    return NextResponse.json({ text })
+    // return NextResponse.json({ text, imageBuffer })
+    // Determine what to return
+    if (imageBuffer) {
+      // If an image was generated, return it directly
+      return new NextResponse(imageBuffer, {
+        status: 200,
+        headers: {
+          "Content-Type": imageMimeType,
+          "Content-Disposition":
+            'inline; filename="gemini-generated-image.png"', // Use 'inline' to display in browser, 'attachment' to download
+        },
+      })
+    } else {
+      // If no image was generated, but there's text, return JSON with text
+      return NextResponse.json(
+        { text: textOutput || "No image generated and no text output." },
+        { status: 200 }
+      )
+    }
   } catch (error) {
     console.error("Error generating content:", error)
     return NextResponse.json(

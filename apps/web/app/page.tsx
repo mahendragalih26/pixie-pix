@@ -1,20 +1,86 @@
+"use client"
 import LazyImage from "@/components/atoms/lazy-image"
 import FileUpload from "@/components/moleculs/fileUpload"
+import { useState } from "react"
+import { useMutation } from "@tanstack/react-query"
+import { GeminiApiResponse } from "@repo/types"
 // import OpenAI from "openai"
 
 export default function Home() {
-  // const openai = new OpenAI({
-  //   apiKey:
-  //     "",
-  // })
+  const [file, setFile] = useState<File | null>(null)
 
-  // const completion = openai.chat.completions.create({
-  //   model: "gpt-4o-mini",
-  //   store: true,
-  //   messages: [{ role: "user", content: "write a haiku about ai" }],
-  // })
+  const prompt = process.env.NEXT_PUBLIC_PROMPT_CHECK_IMAGE
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(
+    null
+  )
+  const [generatedText, setGeneratedText] = useState<string | null>(null)
 
-  // completion.then((result) => console.log("a = ", result?.choices[0].message))
+  // Define the mutation function that will be called by useMutation
+  const imageGenerationMutation = useMutation<
+    GeminiApiResponse, // Expected successful data type
+    Error, // Expected error type
+    { prompt: string; imageFile: File } // Variables passed to mutate function
+  >({
+    mutationFn: async ({ prompt, imageFile }) => {
+      const formData = new FormData()
+      formData.append("prompt", prompt)
+      formData.append("image", imageFile)
+
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!response.ok) {
+        // Try to parse JSON error first
+        const errorData = await response.json().catch(() => null)
+        throw new Error(
+          errorData?.error ||
+            `API error: ${response.statusText || response.status}`
+        )
+      }
+
+      const contentType = response.headers.get("content-type")
+
+      if (contentType && contentType.includes("image/png")) {
+        const imageBlob = await response.blob()
+        return { type: "image", data: imageBlob }
+      } else if (contentType && contentType.includes("application/json")) {
+        const textData = await response.json()
+        return { type: "text", data: textData }
+      } else {
+        throw new Error("Unexpected response content type from API.")
+      }
+    },
+    onSuccess: (data) => {
+      // This runs when the mutation is successful
+      if (data.type === "image") {
+        const url = URL.createObjectURL(data.data as Blob)
+        setGeneratedImageUrl(url)
+        setGeneratedText(null) // Clear text if image is generated
+      } else {
+        setGeneratedText((data.data as { text: string }).text)
+        setGeneratedImageUrl(null) // Clear image if text is generated
+      }
+    },
+    onError: (error) => {
+      // This runs if the mutation fails
+      // setError(error.message);
+    },
+    onSettled: () => {
+      // This runs whether the mutation is successful or fails
+      // (e.g., to clear loading state if it wasn't handled by isPending)
+    },
+  })
+
+  // Destructure states from the mutation hook for easier use
+  const { mutate, isError, error } = imageGenerationMutation
+
+  const handleSubmit = () => {
+    if (file && prompt) {
+      mutate({ prompt, imageFile: file })
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 px-6">
@@ -61,11 +127,17 @@ export default function Home() {
           <p className="text-gray-600 mb-4">
             Share your drawings, photos or any image you want to work with!
           </p>
-          <FileUpload />
+          <FileUpload onUpload={setFile} upload={file} />
 
           <div className="flex justify-between mt-4 text-blue-500 text-sm">
             <a href="#">My Gallery</a>
             <a href="#">Need Help?</a>
+            <button
+              onClick={handleSubmit}
+              className="text-blue-400 p-4 bg-red-300"
+            >
+              submit
+            </button>
           </div>
         </div>
 
@@ -76,17 +148,21 @@ export default function Home() {
               // width={500}
               // height={500}
               fill
-              src="/kids-doodle.jpg"
+              src={generatedImageUrl ? generatedImageUrl : "/kids-doodle.jpg"}
               alt="Animation banner"
               className=" w-full object-cover"
             />
-            <div className="absolute inset-x-0 bottom-0 p-4 min-h-[20%] text-white bg-gradient-to-t from-gray-800 opacity-100">
-              <h4 className="text-xl font-bold">Let's Create Together!</h4>
-              <p className="mb-4">
-                Upload your image and watch the magic happen in our creative
-                canvas!
-              </p>
-            </div>
+            {generatedImageUrl ? (
+              ""
+            ) : (
+              <div className="absolute inset-x-0 bottom-0 p-4 min-h-[20%] text-white bg-gradient-to-t from-gray-800 opacity-100">
+                <h4 className="text-xl font-bold">Let's Create Together!</h4>
+                <p className="mb-4">
+                  Upload your image and watch the magic happen in our creative
+                  canvas!
+                </p>
+              </div>
+            )}
           </div>
 
           {/* <div className="bottom-4 left-4 text-white p-4">

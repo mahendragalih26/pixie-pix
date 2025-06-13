@@ -1,14 +1,30 @@
 import LazyImage from "@/components/atoms/lazy-image"
+import FileUpload from "@/components/moleculs/fileUpload"
+// import OpenAI from "openai"
+
 export default function Home() {
+  // const openai = new OpenAI({
+  //   apiKey:
+  //     "",
+  // })
+
+  // const completion = openai.chat.completions.create({
+  //   model: "gpt-4o-mini",
+  //   store: true,
+  //   messages: [{ role: "user", content: "write a haiku about ai" }],
+  // })
+
+  // completion.then((result) => console.log("a = ", result?.choices[0].message))
+
   return (
     <div className="min-h-screen bg-gray-50 px-6">
       {/* Header */}
-      <header className="flex items-center justify-between mb-10">
+      <header className="flex items-center justify-between ">
         <div className="flex items-center gap-2">
           <LazyImage
             // fill
-            width={100}
-            height={100}
+            width={150}
+            height={150}
             src="/logo.svg"
             alt="logo"
             className="w-full"
@@ -25,8 +41,10 @@ export default function Home() {
 
       {/* Welcome Section */}
       <section className="text-center mb-12">
-        <h2 className="text-3xl font-bold text-blue-700 mb-2">
-          Welcome to PixiePix!
+        <h2 className="text-3xl font-bold text-[#97cae7] mb-2">
+          Welcome to
+          <span className="text-[#f5c7d4]">Pixie</span>
+          <span className="text-[#fede71]">Pix</span>!
         </h2>
         <p className="text-gray-600">
           Upload your images and let's create something amazing together!
@@ -43,18 +61,8 @@ export default function Home() {
           <p className="text-gray-600 mb-4">
             Share your drawings, photos or any image you want to work with!
           </p>
-          <div className="border-2 border-dashed border-yellow-300 rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer">
-            <div className="bg-yellow-400 p-4 rounded-full mb-3">
-              <span className="text-white text-2xl">⬆️</span>
-            </div>
-            <p className="text-blue-600 font-semibold mb-2">Drag & Drop</p>
-            <button className="bg-pink-500 text-white px-4 py-2 rounded-md">
-              Choose File
-            </button>
-            <p className="text-xs text-gray-400 mt-2">
-              Supported files: JPG, PNG, GIF (Max size: 10MB)
-            </p>
-          </div>
+          <FileUpload />
+
           <div className="flex justify-between mt-4 text-blue-500 text-sm">
             <a href="#">My Gallery</a>
             <a href="#">Need Help?</a>
